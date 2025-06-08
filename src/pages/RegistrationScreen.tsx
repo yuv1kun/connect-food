@@ -8,6 +8,7 @@ import AuthInput from '@/components/AuthInput';
 import PasswordInput from '@/components/PasswordInput';
 import Logo from '@/components/Logo';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/supabaseClient';
 
 interface FormData {
   name: string;
@@ -103,25 +104,89 @@ const RegistrationScreen: React.FC = () => {
     return newErrors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    
-    // Registration would happen here in a real app
-    toast({
-      title: "Registration successful!",
-      description: `You've registered as a ${userType}. Please check your email to verify your account.`,
-    });
-    
-    // Navigate to login
-    setTimeout(() => {
-      navigate('/login');
-    }, 1500);
+
+    try {
+      // Sign up the user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (authError) {
+        toast({
+          title: 'Error signing up',
+          description: authError.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!authData.user) {
+        toast({
+          title: 'Error signing up',
+          description: 'No user data returned after sign up.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Prepare profile data
+      const profileData: any = {
+        id: authData.user.id,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        user_type: userType,
+      };
+
+      if (userType === 'ngo') {
+        profileData.org_name = formData.orgName;
+        profileData.reg_number = formData.regNumber;
+      } else if (userType === 'delivery') {
+        profileData.vehicle_type = formData.vehicleType;
+        profileData.license_number = formData.licenseNumber;
+      }
+
+      // Insert user profile
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .insert([profileData]);
+
+      if (profileError) {
+        toast({
+          title: 'Error saving profile',
+          description: profileError.message,
+          variant: 'destructive',
+        });
+        // Potentially handle user deletion if profile insertion fails
+        return;
+      }
+
+      toast({
+        title: 'Registration successful!',
+        description: `You've registered as a ${userType}. Please check your email to verify your account.`,
+      });
+
+      // Navigate to login
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
+
+    } catch (error: any) {
+      toast({
+        title: 'Registration failed',
+        description: error.message || 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const renderRoleSpecificFields = () => {

@@ -7,31 +7,77 @@ import Logo from '@/components/Logo';
 import AuthInput from '@/components/AuthInput';
 import PasswordInput from '@/components/PasswordInput';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/supabaseClient'; // Import Supabase client
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth to check session
 
 interface FormData {
   email: string;
-  verificationCode: string;
+  // verificationCode: string; // Verification code step is removed
   newPassword: string;
   confirmPassword: string;
 }
 
 interface FormErrors {
   email?: string;
-  verificationCode?: string;
+  // verificationCode?: string;
   newPassword?: string;
   confirmPassword?: string;
 }
 
 const PasswordRecoveryScreen: React.FC = () => {
   const navigate = useNavigate();
-  const [step, setStep] = useState<'email' | 'verification' | 'newPassword'>('email');
+  const { session } = useAuth(); // Get session from AuthContext
+  // Step state will now be 'email' or 'newPassword'
+  // 'email': User is requesting a password reset link
+  // 'newPassword': User has clicked the link in their email and is setting a new password
+  const [step, setStep] = useState<'email' | 'newPassword'>('email');
   const [formData, setFormData] = useState<FormData>({
     email: '',
-    verificationCode: '',
+    // verificationCode: '',
     newPassword: '',
     confirmPassword: '',
   });
+  const [loading, setLoading] = useState(false); // Add loading state
   const [errors, setErrors] = useState<FormErrors>({});
+
+  // Check if the user landed on this page from a password reset link
+  // Supabase handles this by setting a session when the user clicks the magic link.
+  // The onAuthStateChange listener in AuthContext will pick this up.
+  // If there's a session and the user is on the password recovery page,
+  // it's likely they've come from a reset link.
+  React.useEffect(() => {
+    // This effect runs when the component mounts and when the session changes.
+    // If there's an active session, it implies the user might have come from a reset link.
+    // Supabase's password recovery flow creates a temporary session for the user
+    // when they click the reset link in their email.
+    // This session allows them to update their password.
+    // The event type for this is 'PASSWORD_RECOVERY'.
+    const subscription = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        setStep('newPassword');
+        // Pre-fill email if available from session, though not strictly necessary
+        // as Supabase handles user context for password update.
+        if (session.user?.email) {
+          setFormData(prev => ({ ...prev, email: session.user.email! }));
+        }
+      }
+    });
+
+    // Also check initial session state on mount, in case onAuthStateChange hasn't fired yet
+    // or if the user navigates directly to a URL that should trigger the new password form.
+    // This part might need adjustment based on how Supabase handles direct navigation to the redirect URL.
+    if (session && window.location.hash.includes('type=recovery')) {
+        setStep('newPassword');
+        if (session.user?.email) {
+            setFormData(prev => ({ ...prev, email: session.user.email! }));
+        }
+    }
+
+
+    return () => {
+      subscription.data.subscription.unsubscribe();
+    };
+  }, [session]); // Rerun when session changes
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -51,16 +97,7 @@ const PasswordRecoveryScreen: React.FC = () => {
     return newErrors;
   };
 
-  const validateVerificationStep = () => {
-    const newErrors: FormErrors = {};
-    
-    if (!formData.verificationCode) newErrors.verificationCode = 'Verification code is required';
-    else if (formData.verificationCode.length !== 6 || !/^\d+$/.test(formData.verificationCode)) {
-      newErrors.verificationCode = 'Enter valid 6-digit code';
-    }
-    
-    return newErrors;
-  };
+  // validateVerificationStep is removed
 
   const validateNewPasswordStep = () => {
     const newErrors: FormErrors = {};
@@ -75,49 +112,73 @@ const PasswordRecoveryScreen: React.FC = () => {
     return newErrors;
   };
 
-  const handleSubmitEmail = () => {
+  const handleSubmitEmail = async () => {
     const validationErrors = validateEmailStep();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    
-    // In a real app, this would send an email with a verification code
-    toast({
-      title: "Verification code sent",
-      description: `We've sent a verification code to ${formData.email}`,
+    setLoading(true);
+    setErrors({});
+
+    // Get the current URL without the hash fragment
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+
+
+    const { error } = await supabase.auth.resetPasswordForEmail(formData.email, {
+      redirectTo: redirectTo, // URL to redirect to after email link is clicked
     });
-    
-    setStep('verification');
-  };
+    setLoading(false);
 
-  const handleSubmitVerification = () => {
-    const validationErrors = validateVerificationStep();
-    if (Object.keys(validationErrors).length > 0) {
-      setErrors(validationErrors);
-      return;
+    if (error) {
+      toast({
+        title: 'Error sending reset email',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Password reset email sent',
+        description: `If an account exists for ${formData.email}, a password reset link has been sent. Please check your inbox (and spam folder).`,
+      });
+      // Don't change step here. User needs to click the link in their email.
+      // The useEffect hook will handle setting the step to 'newPassword' when they return.
     }
-    
-    // In a real app, this would verify the code
-    setStep('newPassword');
   };
 
-  const handleSubmitNewPassword = () => {
+  // handleSubmitVerification is removed
+
+  const handleSubmitNewPassword = async () => {
     const validationErrors = validateNewPasswordStep();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    
-    // In a real app, this would reset the password
-    toast({
-      title: "Password reset successful",
-      description: "Your password has been reset. You can now log in with your new password.",
+    setLoading(true);
+    setErrors({});
+
+    const { error } = await supabase.auth.updateUser({
+      password: formData.newPassword,
     });
-    
-    setTimeout(() => {
-      navigate('/login');
-    }, 1500);
+    setLoading(false);
+
+    if (error) {
+      toast({
+        title: 'Error resetting password',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Password reset successful',
+        description: 'Your password has been updated. You can now log in with your new password.',
+      });
+      // Sign out the temporary session if any
+      await supabase.auth.signOut();
+      setTimeout(() => {
+        navigate('/login');
+      }, 1500);
+    }
   };
 
   const renderStep = () => {
@@ -140,54 +201,19 @@ const PasswordRecoveryScreen: React.FC = () => {
               />
               
               <Button 
-                type="button" 
+                type="button"
                 className="w-full mt-6"
                 onClick={handleSubmitEmail}
+                disabled={loading}
               >
-                Send Verification Code
+                {loading ? 'Sending...' : 'Send Password Reset Email'}
               </Button>
             </div>
           </>
         );
-      
-      case 'verification':
-        return (
-          <>
-            <h1 className="text-2xl font-bold mb-2 text-center">Enter Verification Code</h1>
-            <p className="text-gray-600 text-center mb-8">We've sent a 6-digit code to {formData.email}</p>
-            
-            <div className="form-container">
-              <AuthInput
-                id="verificationCode"
-                label="Verification Code"
-                type="text"
-                value={formData.verificationCode}
-                onChange={handleInputChange}
-                error={errors.verificationCode}
-                required
-              />
-              
-              <div className="mt-2 flex justify-end">
-                <button 
-                  type="button"
-                  onClick={handleSubmitEmail}
-                  className="text-sm text-primary-600 font-medium"
-                >
-                  Resend Code
-                </button>
-              </div>
-              
-              <Button 
-                type="button" 
-                className="w-full mt-6"
-                onClick={handleSubmitVerification}
-              >
-                Verify
-              </Button>
-            </div>
-          </>
-        );
-      
+
+      // 'verification' case is removed
+
       case 'newPassword':
         return (
           <>
@@ -214,11 +240,12 @@ const PasswordRecoveryScreen: React.FC = () => {
               />
               
               <Button 
-                type="button" 
+                type="button"
                 className="w-full mt-6"
                 onClick={handleSubmitNewPassword}
+                disabled={loading}
               >
-                Reset Password
+                {loading ? 'Resetting...' : 'Reset Password'}
               </Button>
             </div>
           </>
@@ -235,10 +262,10 @@ const PasswordRecoveryScreen: React.FC = () => {
           onClick={() => {
             if (step === 'email') {
               navigate('/login');
-            } else if (step === 'verification') {
-              setStep('email');
             } else if (step === 'newPassword') {
-              setStep('verification');
+              // If they are on the new password screen, going back should take them to login
+              // as the reset link process would need to be restarted.
+              setStep('email'); // Or navigate('/login');
             }
           }}
           className="mr-auto"

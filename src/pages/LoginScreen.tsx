@@ -7,6 +7,7 @@ import Logo from '@/components/Logo';
 import AuthInput from '@/components/AuthInput';
 import PasswordInput from '@/components/PasswordInput';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/lib/supabaseClient';
 
 interface FormData {
   email: string;
@@ -25,6 +26,7 @@ const LoginScreen: React.FC = () => {
     password: '',
   });
   const [errors, setErrors] = useState<FormErrors>({});
+  const [loading, setLoading] = useState(false); // Add loading state
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
@@ -46,25 +48,97 @@ const LoginScreen: React.FC = () => {
     return newErrors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const validationErrors = validateForm();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
-    
-    // Login would happen here in a real app
-    toast({
-      title: "Login successful!",
-      description: "Welcome back to SustainConnect.",
-    });
-    
-    // Navigate to home or dashboard in a real app
-    setTimeout(() => {
-      navigate('/');
-    }, 1500);
+    setLoading(true);
+    setErrors({});
+
+    try {
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+      });
+
+      if (signInError) {
+        setLoading(false);
+        toast({
+          title: 'Error logging in',
+          description: signInError.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!signInData || !signInData.user) {
+        setLoading(false);
+        toast({
+          title: 'Error logging in',
+          description: 'No user data returned after sign in.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Fetch user profile to get the role (user_type)
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('user_type')
+        .eq('id', signInData.user.id)
+        .single();
+
+      setLoading(false);
+
+      if (profileError) {
+        toast({
+          title: 'Error fetching profile',
+          description: profileError.message,
+          variant: 'destructive',
+        });
+        // Still log in, but navigate to a generic page or show a specific message
+        navigate('/'); // Fallback navigation
+        return;
+      }
+
+      toast({
+        title: 'Login successful!',
+        description: 'Welcome back to SustainConnect. Redirecting...',
+      });
+
+      const userType = profile?.user_type;
+
+      switch (userType) {
+        case 'donor':
+          navigate('/donor/dashboard');
+          break;
+        case 'ngo':
+          navigate('/ngo/dashboard');
+          break;
+        case 'delivery':
+          navigate('/delivery/dashboard');
+          break;
+        default:
+          toast({
+            title: 'Unknown user role',
+            description: `Your role (${userType}) is not recognized. Navigating to home.`,
+            variant: 'warning',
+          });
+          navigate('/'); // Fallback for unknown roles
+      }
+
+    } catch (error: any) {
+      setLoading(false);
+      toast({
+        title: 'Login failed',
+        description: error.message || 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -115,8 +189,8 @@ const LoginScreen: React.FC = () => {
           </button>
         </div>
         
-        <Button type="submit" className="w-full mt-6">
-          Log In
+        <Button type="submit" className="w-full mt-6" disabled={loading}>
+          {loading ? 'Logging in...' : 'Log In'}
         </Button>
         
         <div className="text-center mt-8">
