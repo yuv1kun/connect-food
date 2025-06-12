@@ -109,3 +109,9 @@
 - [ ] Build core API endpoints - Starting with donation management
 - [ ] Integrate maps service - For location features
 - [ ] Add real-time features - Status updates and tracking
+
+## Database Setup
+
+Run the SQL file in `supabase/migrations/0001_create_profiles.sql` on your
+Supabase project to create the `profiles` table used for storing user details
+and roles.

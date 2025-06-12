@@ -134,7 +134,7 @@ const RegistrationScreen: React.FC = () => {
     }
     toast({
       title: 'Registration successful!',
-      description: `You\'ve registered as a ${userType}. Please check your email to verify your account.`,
+      description: `You've registered as a ${userType}. Please check your email to verify your account.`,
     });
     navigate('/login');
   };
