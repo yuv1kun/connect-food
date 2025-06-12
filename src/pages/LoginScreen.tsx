@@ -7,6 +7,8 @@ import Logo from '@/components/Logo';
 import AuthInput from '@/components/AuthInput';
 import PasswordInput from '@/components/PasswordInput';
 import { toast } from '@/components/ui/use-toast';
+import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/lib/supabaseClient';
 
 interface FormData {
   email: string;
@@ -20,6 +22,7 @@ interface FormErrors {
 
 const LoginScreen: React.FC = () => {
   const navigate = useNavigate();
+  const { signIn } = useAuth();
   const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
@@ -46,7 +49,7 @@ const LoginScreen: React.FC = () => {
     return newErrors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const validationErrors = validateForm();
@@ -55,16 +58,19 @@ const LoginScreen: React.FC = () => {
       return;
     }
     
-    // Login would happen here in a real app
-    toast({
-      title: "Login successful!",
-      description: "Welcome back to SustainConnect.",
-    });
-    
-    // Navigate to home or dashboard in a real app
-    setTimeout(() => {
-      navigate('/');
-    }, 1500);
+    const { error } = await signIn(formData.email, formData.password);
+    if (error) {
+      toast({ title: 'Login failed', description: error.message, variant: 'destructive' });
+      return;
+    }
+
+    const { data } = await supabase.auth.getUser();
+    const role = data.user?.user_metadata?.role;
+    toast({ title: 'Login successful!', description: 'Welcome back to SustainConnect.' });
+    if (role === 'donor') navigate('/donor/dashboard');
+    else if (role === 'ngo') navigate('/ngo/dashboard');
+    else if (role === 'delivery') navigate('/delivery/dashboard');
+    else navigate('/');
   };
 
   return (

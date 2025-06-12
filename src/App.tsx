@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
 import SplashScreen from "./pages/SplashScreen";
 import UserSelectionScreen from "./pages/UserSelectionScreen";
 import RegistrationScreen from "./pages/RegistrationScreen";
@@ -59,36 +60,114 @@ const App = () => (
           <Route path="/recover-password" element={<PasswordRecoveryScreen />} />
           
           {/* Donor Module Routes */}
-          <Route path="/donor/dashboard" element={<DonorDashboard />} />
-          <Route path="/donor/create-donation" element={<CreateDonation />} />
-          <Route path="/donor/location-pickup" element={<LocationPickupDetails />} />
-          <Route path="/donor/review-submit" element={<DonationReviewSubmit />} />
-          <Route path="/donor/donation-status/:id" element={<DonationStatus />} />
-          <Route path="/donor/donation-history" element={<DonationHistory />} />
-          <Route path="/donor/impact" element={<ImpactDashboard />} />
-          <Route path="/donor/profile" element={<DonorProfile />} />
+          <Route
+            path="/donor/dashboard"
+            element={<ProtectedRoute role="donor"><DonorDashboard /></ProtectedRoute>}
+          />
+          <Route
+            path="/donor/create-donation"
+            element={<ProtectedRoute role="donor"><CreateDonation /></ProtectedRoute>}
+          />
+          <Route
+            path="/donor/location-pickup"
+            element={<ProtectedRoute role="donor"><LocationPickupDetails /></ProtectedRoute>}
+          />
+          <Route
+            path="/donor/review-submit"
+            element={<ProtectedRoute role="donor"><DonationReviewSubmit /></ProtectedRoute>}
+          />
+          <Route
+            path="/donor/donation-status/:id"
+            element={<ProtectedRoute role="donor"><DonationStatus /></ProtectedRoute>}
+          />
+          <Route
+            path="/donor/donation-history"
+            element={<ProtectedRoute role="donor"><DonationHistory /></ProtectedRoute>}
+          />
+          <Route
+            path="/donor/impact"
+            element={<ProtectedRoute role="donor"><ImpactDashboard /></ProtectedRoute>}
+          />
+          <Route
+            path="/donor/profile"
+            element={<ProtectedRoute role="donor"><DonorProfile /></ProtectedRoute>}
+          />
           
           {/* NGO Module Routes */}
-          <Route path="/ngo/dashboard" element={<NgoDashboard />} />
-          <Route path="/ngo/available-donations" element={<AvailableDonations />} />
-          <Route path="/ngo/donation-details/:id" element={<DonationDetails />} />
-          <Route path="/ngo/pickup-assignment/:id" element={<PickupAssignment />} />
-          <Route path="/ngo/active-pickups" element={<ActivePickups />} />
-          <Route path="/ngo/distribution" element={<DistributionManagement />} />
-          <Route path="/ngo/analytics" element={<AnalyticsReporting />} />
-          <Route path="/ngo/profile" element={<NgoProfile />} />
+          <Route
+            path="/ngo/dashboard"
+            element={<ProtectedRoute role="ngo"><NgoDashboard /></ProtectedRoute>}
+          />
+          <Route
+            path="/ngo/available-donations"
+            element={<ProtectedRoute role="ngo"><AvailableDonations /></ProtectedRoute>}
+          />
+          <Route
+            path="/ngo/donation-details/:id"
+            element={<ProtectedRoute role="ngo"><DonationDetails /></ProtectedRoute>}
+          />
+          <Route
+            path="/ngo/pickup-assignment/:id"
+            element={<ProtectedRoute role="ngo"><PickupAssignment /></ProtectedRoute>}
+          />
+          <Route
+            path="/ngo/active-pickups"
+            element={<ProtectedRoute role="ngo"><ActivePickups /></ProtectedRoute>}
+          />
+          <Route
+            path="/ngo/distribution"
+            element={<ProtectedRoute role="ngo"><DistributionManagement /></ProtectedRoute>}
+          />
+          <Route
+            path="/ngo/analytics"
+            element={<ProtectedRoute role="ngo"><AnalyticsReporting /></ProtectedRoute>}
+          />
+          <Route
+            path="/ngo/profile"
+            element={<ProtectedRoute role="ngo"><NgoProfile /></ProtectedRoute>}
+          />
           
           {/* Delivery Module Routes */}
-          <Route path="/delivery/dashboard" element={<DeliveryDashboard />} />
-          <Route path="/delivery/available" element={<AvailableDeliveries />} />
-          <Route path="/delivery/active" element={<ActiveDeliveries />} />
-          <Route path="/delivery/details/:id" element={<DeliveryDetails />} />
-          <Route path="/delivery/navigation/:id" element={<NavigationScreen />} />
-          <Route path="/delivery/pickup-confirmation/:id" element={<PickupConfirmation />} />
-          <Route path="/delivery/in-transit/:id" element={<InTransit />} />
-          <Route path="/delivery/delivery-confirmation/:id" element={<DeliveryConfirmation />} />
-          <Route path="/delivery/history" element={<DeliveryHistory />} />
-          <Route path="/delivery/profile" element={<DeliveryProfile />} />
+          <Route
+            path="/delivery/dashboard"
+            element={<ProtectedRoute role="delivery"><DeliveryDashboard /></ProtectedRoute>}
+          />
+          <Route
+            path="/delivery/available"
+            element={<ProtectedRoute role="delivery"><AvailableDeliveries /></ProtectedRoute>}
+          />
+          <Route
+            path="/delivery/active"
+            element={<ProtectedRoute role="delivery"><ActiveDeliveries /></ProtectedRoute>}
+          />
+          <Route
+            path="/delivery/details/:id"
+            element={<ProtectedRoute role="delivery"><DeliveryDetails /></ProtectedRoute>}
+          />
+          <Route
+            path="/delivery/navigation/:id"
+            element={<ProtectedRoute role="delivery"><NavigationScreen /></ProtectedRoute>}
+          />
+          <Route
+            path="/delivery/pickup-confirmation/:id"
+            element={<ProtectedRoute role="delivery"><PickupConfirmation /></ProtectedRoute>}
+          />
+          <Route
+            path="/delivery/in-transit/:id"
+            element={<ProtectedRoute role="delivery"><InTransit /></ProtectedRoute>}
+          />
+          <Route
+            path="/delivery/delivery-confirmation/:id"
+            element={<ProtectedRoute role="delivery"><DeliveryConfirmation /></ProtectedRoute>}
+          />
+          <Route
+            path="/delivery/history"
+            element={<ProtectedRoute role="delivery"><DeliveryHistory /></ProtectedRoute>}
+          />
+          <Route
+            path="/delivery/profile"
+            element={<ProtectedRoute role="delivery"><DeliveryProfile /></ProtectedRoute>}
+          />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
