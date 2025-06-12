@@ -8,6 +8,7 @@ import AuthInput from '@/components/AuthInput';
 import PasswordInput from '@/components/PasswordInput';
 import Logo from '@/components/Logo';
 import { toast } from '@/components/ui/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 interface FormData {
   name: string;
@@ -103,7 +104,9 @@ const RegistrationScreen: React.FC = () => {
     return newErrors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const { signUp } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const validationErrors = validateForm();
@@ -112,16 +115,28 @@ const RegistrationScreen: React.FC = () => {
       return;
     }
     
-    // Registration would happen here in a real app
+    const { error } = await signUp(
+      formData.email,
+      formData.password,
+      {
+        role: userType,
+        name: formData.name,
+        phone: formData.phone,
+        orgName: formData.orgName,
+        regNumber: formData.regNumber,
+        vehicleType: formData.vehicleType,
+        licenseNumber: formData.licenseNumber,
+      }
+    );
+    if (error) {
+      toast({ title: 'Registration failed', description: error.message, variant: 'destructive' });
+      return;
+    }
     toast({
-      title: "Registration successful!",
-      description: `You've registered as a ${userType}. Please check your email to verify your account.`,
+      title: 'Registration successful!',
+      description: `You\'ve registered as a ${userType}. Please check your email to verify your account.`,
     });
-    
-    // Navigate to login
-    setTimeout(() => {
-      navigate('/login');
-    }, 1500);
+    navigate('/login');
   };
 
   const renderRoleSpecificFields = () => {
